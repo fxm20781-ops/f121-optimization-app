@@ -39,13 +39,13 @@ def run_optimization_program(dt_operation_input, c141_operation_input, given_f12
     y_c122 = df_model[target_c122]
 
     # 3. 訓練兩個隨機森林模型
-    print("正在訓練製程最佳化模型與溫度預測模型...")
+    st.write("正在訓練製程最佳化模型與溫度預測模型...")
     model_ng = RandomForestRegressor(n_estimators=100, random_state=42)
     model_ng.fit(X, y_ng)
 
     model_c122 = RandomForestRegressor(n_estimators=100, random_state=42)
     model_c122.fit(X, y_c122)
-    print("模型訓練完成！")
+    st.write("模型訓練完成！")
 
     # 4. 定義核心尋優與預測函數
     # 使用使用者指定的操作範圍
@@ -80,32 +80,31 @@ def run_optimization_program(dt_operation_input, c141_operation_input, given_f12
     # F121outlet temperature 現在是給定值，不再是優化結果
     opt_oxy = best_run['F121  Oxygen content %'].values[0]
     min_ng = best_run['pred_NG'].values[0]
-
-    print("\n================== 系統最佳化引導報告 ==================")
-    print(f"【目前給定不可控條件】:")
-    print(f"  - DT operation           : {dt_operation_input:.4f}")
-    print(f"  - C141 operation         : {c141_operation_input:.4f}")
-    print(f"  - F121outlet temperature : {given_f121_outlet_temp:.2f}") # 將其列為給定條件
-    print(f"\n【建議之最優操作控制參數（目標：最低 NG 能耗）】:")
-    print(f"  👉 F121 CLO circulation flow : {opt_flow:.2f}")
-    print(f"  👉 F121  Oxygen content %    : {opt_oxy:.2f}")
-    print(f"\n【預期操作結果與影響預測】:")
-    print(f"  - 預估最低 F121 NG consumption   : {min_ng:.2f}")
-    print(f"  - 預估此時 C122 bottom temperature: {predicted_c122_temp:.2f} (⚠️請確認此溫度是否在安全操作區間)")
-    print("=====================================================")
+    st.write("\n================== 系統最佳化引導報告 ==================")
+    st.write(f"【目前給定不可控條件】:")
+    st.write(f"  - DT operation           : {dt_operation_input:.4f}")
+    st.write(f"  - C141 operation         : {c141_operation_input:.4f}")
+    st.write(f"  - F121outlet temperature : {given_f121_outlet_temp:.2f}") # 將其列為給定條件
+    st.write(f"\n【建議之最優操作控制參數（目標：最低 NG 能耗）】:")
+    st.write(f"  👉 F121 CLO circulation flow : {opt_flow:.2f}")
+    st.write(f"  👉 F121  Oxygen content %    : {opt_oxy:.2f}")
+    st.write(f"\n【預期操作結果與影響預測】:")
+    st.write(f"  - 預估最低 F121 NG consumption   : {min_ng:.2f}")
+    st.write(f"  - 預估此時 C122 bottom temperature: {predicted_c122_temp:.2f} (⚠️請確認此溫度是否在安全操作區間)")
+    st.write("=====================================================")
 
 
 # --- 5. 現場操作模擬測試 ---
 # 您可以將以下數值修改為目前製程當下的實際 DT 與 C141 數值
 if __name__ == "__main__":
-    print("歡迎使用製程最佳化程式！")
-    print("請輸入當前的不可控條件：")
+    st.write("歡迎使用製程最佳化程式！")
+    st.write("請輸入當前的不可控條件：")
 
     try:
-        current_dt_input = float(input("  - 請輸入 DT operation: "))
-        current_c141_input = float(input("  - 請輸入 C141 operation: "))
-        current_f121_outlet_temp_input = float(input("  - 請輸入 F121outlet temperature: ")) # 新增此輸入
+        current_dt_input = st.sidebar.number_input("  - 請輸入 DT operation: "))
+        current_c141_input = st.sidebar.number_input("  - 請輸入 C141 operation: "))
+        current_f121_outlet_temp_input =st.sidebar.number_input("  - 請輸入 F121outlet temperature: ")) # 新增此輸入
     except ValueError:
-        print("輸入無效。請輸入數字。")
+        st.write("輸入無效。請輸入數字。")
     else:
         run_optimization_program(current_dt_input, current_c141_input, current_f121_outlet_temp_input)
