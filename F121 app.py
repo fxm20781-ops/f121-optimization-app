@@ -5,7 +5,7 @@ import os
 
 def run_optimization_program(dt_operation_input, c141_operation_input, given_f121_outlet_temp):
     # 1. 讀取數據（排除第二行單位標籤並清除欄位名稱前後空格與換行）
-    file_path = 'F121建模區間 .xlsx' # Assumes file is in the same directory as the script
+    file_path = 'data.csv' # Assumes file is in the same directory as the script
     if not os.path.exists(file_path):
         print(f"錯誤：找不到檔案 '{file_path}'。請確保檔案位於程式碼相同的目錄下。")
         return
