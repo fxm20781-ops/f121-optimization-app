@@ -10,7 +10,7 @@ st.title("🏭 F121 加熱爐操作最佳化與預測系統")
 @st.cache_resource
 def load_data_and_train_models():
     # 強迫指定 engine="openpyxl"，不論副檔名是啥，都用 Excel 格式打開
-    df = pd.read_excel("data.csv", skiprows=[1], engine="openpyxl").dropna()
+    df = pd.read_excel("data.xlsx", skiprows=[1], engine="openpyxl").dropna()
     
     # 徹底清洗所有欄位名稱：移除換行符 \n、移除所有前後重複空白
     df.columns = df.columns.str.replace(r'\s+', ' ', regex=True).str.strip()
