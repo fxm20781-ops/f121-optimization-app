@@ -9,9 +9,8 @@ st.title("🏭 F121 加熱爐操作最佳化與預測系統")
 # 1. 讀取數據與模型訓練（強效快取）
 @st.cache_resource
 def load_data_and_train_models():
-    # 【關鍵修正】因為 data.csv 本質是 Excel 檔，直接用 read_excel 讀取！
-    # skiprows=1 代表跳過第二行的單位標籤，並且從 Sheet1（或預設第一個分頁）讀取
-    df = pd.read_excel("data.xlsx", skiprows=[1]).dropna()
+    # 【核心修正】強迫指定 engine="openpyxl"，告訴 Python：不管副檔名是啥，它就是 Excel 檔！
+    df = pd.read_excel("data.xlsx", skiprows=[1], engine="openpyxl").dropna()
     
     # 徹底清洗所有欄位名稱：移除換行符 \n、移除所有前後重複空白
     df.columns = df.columns.str.replace(r'\s+', ' ', regex=True).str.strip()
@@ -25,7 +24,7 @@ def load_data_and_train_models():
     col_ng = 'F121 NG consumption'
     col_c122 = 'C122 bottom temperature'
 
-    # 如果有因兩個空格產生的細微不一致，進行自動防禦修正
+    # 自動動態防禦機制：防止空格細微不一致
     for col in df.columns:
         if 'DT' in col and 'operation' in col: col_dt = col
         elif 'C141' in col and 'operation' in col: col_c141 = col
@@ -41,7 +40,7 @@ def load_data_and_train_models():
     y_ng = df[col_ng]
     y_c122 = df[col_c122]
     
-    # 使用極速隨森林模型（30棵樹，確保雲端 0.5 秒內算完）
+    # 使用極速隨機森林模型（30棵樹，確保雲端不超時）
     model_ng = RandomForestRegressor(n_estimators=30, random_state=42, n_jobs=-1)
     model_ng.fit(X, y_ng)
     
@@ -59,12 +58,11 @@ def load_data_and_train_models():
 
 # 執行載入
 try:
-    with st.spinner('📊 AI 正在讀取 Excel 數據並訓練製程模型...'):
+    with st.spinner('📊 AI 正在強行解析 Excel 數據並訓練製程模型...'):
         model_ng, model_c122, r, features = load_data_and_train_models()
     st.success('✅ 數據加載成功！智慧推薦系統已就緒。')
 except Exception as e:
     st.error(f"❌ 數據初始化失敗，錯誤原因: {e}")
-    st.info("提示：如果遇到 openpyxl 錯誤，請確認 requirements.txt 內有加入 openpyxl 套件。")
     st.stop()
 
 # 2. 側邊欄輸入
@@ -75,7 +73,6 @@ input_c141 = st.sidebar.number_input("2. C141 operation", min_value=r['c141_min'
 # 3. 核心最佳化運算
 if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
     with st.spinner('🔄 正在精準計算最低能耗解...'):
-        # 8點切分（共512種操作組合網格搜尋）
         flows = np.linspace(r['flow_min'], r['flow_max'], 8)
         temps = np.linspace(r['temp_min'], r['temp_max'], 8)
         oxys = np.linspace(r['oxy_min'], r['oxy_max'], 8)
