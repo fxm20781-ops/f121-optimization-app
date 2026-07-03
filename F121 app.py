@@ -12,29 +12,23 @@ def load_data_and_train_models():
     # 讀取數據（自動略過第二行的單位標籤）
     df = pd.read_csv("data.csv", skiprows=[1]).dropna()
     
-    # 徹底清洗欄位名稱，移除換行符 \n，並把多個空格統一壓縮成一個空格
-    df.columns = df.columns.str.replace(r'\s+', ' ', regex=True).str.strip()
+    # 確保資料行數足夠（扣除時間欄，至少要有 8 欄主要製程數據）
+    if df.shape[1] < 8:
+        raise ValueError(f"數據欄位數量不足，目前的欄位總數為 {df.shape[1]}")
+        
+    # 【改用位置指派】直接用欄位索引(位置)重新定義名稱，管他名字有幾個空格！
+    # 欄位順序：0:時間, 1:DT, 2:C141, 3:C122_temp, 4:C121_temp, 5:CLO, 6:outlet_temp, 7:NG, 8:oxygen
+    new_columns = list(df.columns)
+    new_columns[1] = 'DT'
+    new_columns[2] = 'C141'
+    new_columns[3] = 'C122_temp'
+    new_columns[5] = 'CLO'
+    new_columns[6] = 'outlet_temp'
+    new_columns[7] = 'NG'
+    new_columns[8] = 'oxygen'
     
-    # 【超級模糊配對機制】自動用關鍵字去找欄位真正的名字，管它有幾個空格！
-    col_mapping = {}
-    for col in df.columns:
-        if 'DT' in col and 'operation' in col: col_mapping['DT'] = col
-        elif 'C141' in col and 'operation' in col: col_mapping['C141'] = col
-        elif 'CLO' in col and 'flow' in col: col_mapping['CLO'] = col
-        elif 'outlet' in col and 'temperature' in col: col_mapping['outlet_temp'] = col
-        elif 'Oxygen' in col: col_mapping['oxygen'] = col
-        elif 'NG' in col and 'consumption' in col: col_mapping['NG'] = col
-        elif 'C122' in col and 'bottom' in col: col_mapping['C122_temp'] = col
+    df.columns = new_columns
 
-    # 檢查是否有任何關鍵欄位沒對到
-    required_keys = ['DT', 'C141', 'CLO', 'outlet_temp', 'oxygen', 'NG', 'C122_temp']
-    missing_keys = [k for k in required_keys if k not in col_mapping]
-    if missing_keys:
-        raise ValueError(f"數據表中缺少關鍵欄位關鍵字: {missing_keys}。目前欄位有: {list(df.columns)}")
-
-    # 重新命名欄位為標準英文字稱（徹底解決空格地雷）
-    df = df.rename(columns={v: k for k, v in col_mapping.items()})
-    
     # 標準特徵與目標
     features = ['DT', 'C141', 'CLO', 'outlet_temp', 'oxygen']
     X = df[features]
@@ -74,7 +68,7 @@ input_c141 = st.sidebar.number_input("2. C141 operation", min_value=r['c141_min'
 # 3. 核心最佳化運算
 if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
     with st.spinner('🔄 正在精準計算最低能耗解...'):
-        # 8點切分（共512種組合），確保 0.1 秒內出結果
+        # 8點切分（共512種組合）
         flows = np.linspace(r['flow_min'], r['flow_max'], 8)
         temps = np.linspace(r['temp_min'], r['temp_max'], 8)
         oxys = np.linspace(r['oxy_min'], r['oxy_max'], 8)
