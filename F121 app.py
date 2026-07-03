@@ -10,7 +10,7 @@ st.title("🏭 F121 加熱爐操作最佳化與預測系統")
 @st.cache_resource
 def load_data_and_train_models():
     # 強迫指定 engine="openpyxl"，不論副檔名是啥，都用 Excel 格式打開
-    df = pd.read_excel("data.xlsx", skiprows=[1], engine="openpyxl").dropna()
+    df = pd.read_excel("data.csv", skiprows=[1], engine="openpyxl")
     
     # 徹底清洗所有欄位名稱：移除換行符 \n、移除所有前後重複空白
     df.columns = df.columns.str.replace(r'\s+', ' ', regex=True).str.strip()
@@ -33,6 +33,15 @@ def load_data_and_train_models():
         elif 'Oxygen' in col: col_oxy = col
         elif 'NG' in col and 'consumption' in col: col_ng = col
         elif 'C122' in col and 'bottom' in col: col_c122 = col
+
+    # 【超級核心修正】將所有需要用到的製程特徵欄位，強制轉換成數字。
+    # 只要遇到 '***'，errors='coerce' 會自動將其轉換為 NaN (空白)，接著再用 dropna 濾除！
+    target_cols = [col_dt, col_c141, col_clo, col_outlet, col_oxy, col_ng, col_c122]
+    for col in target_cols:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+    # 轉換完畢後，這時再 dropna() 就能百分之百完美剔除所有含有 '***' 的不良紀錄
+    df = df.dropna(subset=target_cols)
 
     # 標準特徵(X)與目標(y)
     features = [col_dt, col_c141, col_clo, col_outlet, col_oxy]
@@ -58,9 +67,9 @@ def load_data_and_train_models():
 
 # 執行載入
 try:
-    with st.spinner('📊 AI 正在解析 Excel 數據並訓練製程模型...'):
+    with st.spinner('📊 AI 正在強力清洗異常數據(如 ***)並訓練製程模型...'):
         model_ng, model_c122, r, features = load_data_and_train_models()
-    st.success('✅ 數據加載成功！智慧推薦系統已就緒。')
+    st.success('✅ 異常數據清洗完畢，AI 模型加載成功！')
 except Exception as e:
     st.error(f"❌ 數據初始化失敗，錯誤原因: {e}")
     st.stop()
@@ -90,7 +99,6 @@ if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
         best_run = sim_df.loc[[best_index]].copy()
         predicted_c122_temp = model_c122.predict(best_run[features])[0]
         
-        # 【精準對位修正】直接抓取特徵清單中對應的真實 Excel 欄位名稱，避免 KeyError
         opt_flow = best_run[features[2]].values[0]
         opt_temp = best_run[features[3]].values[0]
         opt_oxy = best_run[features[4]].values[0]
