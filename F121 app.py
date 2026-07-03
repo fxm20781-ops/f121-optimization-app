@@ -9,31 +9,26 @@ st.title("🏭 F121 加熱爐操作最佳化與預測系統")
 # 1. 讀取數據與模型訓練（強效快取）
 @st.cache_resource
 def load_data_and_train_models():
-    # 讀取數據（自動略過第二行的單位標籤）
+    # 讀取數據（自動略過第二行的單位標籤），並確保時間不變成 index
     df = pd.read_csv("data.csv", skiprows=[1]).dropna()
     
-    # 確保資料行數足夠（扣除時間欄，至少要有 8 欄主要製程數據）
-    if df.shape[1] < 8:
-        raise ValueError(f"數據欄位數量不足，目前的欄位總數為 {df.shape[1]}")
-        
-    # 【改用位置指派】直接用欄位索引(位置)重新定義名稱，管他名字有幾個空格！
-    # 欄位順序：0:時間, 1:DT, 2:C141, 3:C122_temp, 4:C121_temp, 5:CLO, 6:outlet_temp, 7:NG, 8:oxygen
-    new_columns = list(df.columns)
-    new_columns[1] = 'DT'
-    new_columns[2] = 'C141'
-    new_columns[3] = 'C122_temp'
-    new_columns[5] = 'CLO'
-    new_columns[6] = 'outlet_temp'
-    new_columns[7] = 'NG'
-    new_columns[8] = 'oxygen'
+    # 徹底清洗所有欄位名稱：移除 \n、移除所有重複空白，變成乾淨的標準字串
+    df.columns = df.columns.str.replace(r'\s+', ' ', regex=True).str.strip()
     
-    df.columns = new_columns
+    # 動態尋找包含關鍵字的欄位名稱
+    col_dt = [c for c in df.columns if 'DT' in c and 'operation' in c][0]
+    col_c141 = [c for c in df.columns if 'C141' in c and 'operation' in c][0]
+    col_clo = [c for c in df.columns if 'CLO' in c and 'flow' in c][0]
+    col_outlet = [c for c in df.columns if 'outlet' in c and 'temperature' in c][0]
+    col_oxy = [c for c in df.columns if 'Oxygen' in c][0]
+    col_ng = [c for c in df.columns if 'NG' in c and 'consumption' in c][0]
+    col_c122 = [c for c in df.columns if 'C122' in c and 'bottom' in c][0]
 
-    # 標準特徵與目標
-    features = ['DT', 'C141', 'CLO', 'outlet_temp', 'oxygen']
+    # 標準化特徵(X)與目標(y)
+    features = [col_dt, col_c141, col_clo, col_outlet, col_oxy]
     X = df[features]
-    y_ng = df['NG']
-    y_c122 = df['C122_temp']
+    y_ng = df[col_ng]
+    y_c122 = df[col_c122]
     
     # 使用極速隨機森林（30棵樹，確保雲端不超時）
     model_ng = RandomForestRegressor(n_estimators=30, random_state=42, n_jobs=-1)
@@ -43,11 +38,11 @@ def load_data_and_train_models():
     model_c122.fit(X, y_c122)
     
     ranges = {
-        'dt_min': float(df['DT'].min()), 'dt_max': float(df['DT'].max()),
-        'c141_min': float(df['C141'].min()), 'c141_max': float(df['C141'].max()),
-        'flow_min': float(df['CLO'].min()), 'flow_max': float(df['CLO'].max()),
-        'temp_min': float(df['outlet_temp'].min()), 'temp_max': float(df['outlet_temp'].max()),
-        'oxy_min': float(df['oxygen'].min()), 'oxy_max': float(df['oxygen'].max()),
+        'dt_min': float(df[col_dt].min()), 'dt_max': float(df[col_dt].max()),
+        'c141_min': float(df[col_c141].min()), 'c141_max': float(df[col_c141].max()),
+        'flow_min': float(df[col_clo].min()), 'flow_max': float(df[col_clo].max()),
+        'temp_min': float(df[col_outlet].min()), 'temp_max': float(df[col_outlet].max()),
+        'oxy_min': float(df[col_oxy].min()), 'oxy_max': float(df[col_oxy].max()),
     }
     return model_ng, model_c122, ranges, features
 
@@ -86,9 +81,9 @@ if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
         best_run = sim_df.loc[[best_index]].copy()
         predicted_c122_temp = model_c122.predict(best_run[features])[0]
         
-        opt_flow = best_run['CLO'].values[0]
-        opt_temp = best_run['outlet_temp'].values[0]
-        opt_oxy = best_run['oxygen'].values[0]
+        opt_flow = best_run[features[2]].values[0]
+        opt_temp = best_run[features[3]].values[0]
+        opt_oxy = best_run[features[4]].values[0]
         min_ng = best_run['pred_NG'].values[0]
 
     # 4. 顯示結果
