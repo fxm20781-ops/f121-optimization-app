@@ -11,7 +11,7 @@ st.title("🏭 F121 加熱爐操作最佳化與預測系統")
 def load_data_and_train_models():
     # 【關鍵修正】因為 data.csv 本質是 Excel 檔，直接用 read_excel 讀取！
     # skiprows=1 代表跳過第二行的單位標籤，並且從 Sheet1（或預設第一個分頁）讀取
-    df = pd.read_excel("data.csv", skiprows=[1]).dropna()
+    df = pd.read_excel("data.xlsx", skiprows=[1]).dropna()
     
     # 徹底清洗所有欄位名稱：移除換行符 \n、移除所有前後重複空白
     df.columns = df.columns.str.replace(r'\s+', ' ', regex=True).str.strip()
