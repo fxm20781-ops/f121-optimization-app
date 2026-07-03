@@ -9,13 +9,13 @@ st.title("🏭 F121 加熱爐操作最佳化與預測系統")
 # 1. 讀取數據與模型訓練（強效快取）
 @st.cache_resource
 def load_data_and_train_models():
-    # 【核心修正】強迫指定 engine="openpyxl"，告訴 Python：不管副檔名是啥，它就是 Excel 檔！
-    df = pd.read_excel("data.xlsx", skiprows=[1], engine="openpyxl").dropna()
+    # 強迫指定 engine="openpyxl"，不論副檔名是啥，都用 Excel 格式打開
+    df = pd.read_excel("data.csv", skiprows=[1], engine="openpyxl").dropna()
     
     # 徹底清洗所有欄位名稱：移除換行符 \n、移除所有前後重複空白
     df.columns = df.columns.str.replace(r'\s+', ' ', regex=True).str.strip()
     
-    # 依據您數據中真實存在的 Excel 欄位名稱進行精準對位
+    # 預設名稱
     col_dt = 'DT operation'
     col_c141 = 'C141 operation'
     col_clo = 'F121 CLO circulation flow'
@@ -40,7 +40,7 @@ def load_data_and_train_models():
     y_ng = df[col_ng]
     y_c122 = df[col_c122]
     
-    # 使用極速隨機森林模型（30棵樹，確保雲端不超時）
+    # 使用極速隨機森林模型
     model_ng = RandomForestRegressor(n_estimators=30, random_state=42, n_jobs=-1)
     model_ng.fit(X, y_ng)
     
@@ -58,7 +58,7 @@ def load_data_and_train_models():
 
 # 執行載入
 try:
-    with st.spinner('📊 AI 正在強行解析 Excel 數據並訓練製程模型...'):
+    with st.spinner('📊 AI 正在解析 Excel 數據並訓練製程模型...'):
         model_ng, model_c122, r, features = load_data_and_train_models()
     st.success('✅ 數據加載成功！智慧推薦系統已就緒。')
 except Exception as e:
@@ -90,6 +90,7 @@ if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
         best_run = sim_df.loc[[best_index]].copy()
         predicted_c122_temp = model_c122.predict(best_run[features])[0]
         
+        # 【精準對位修正】直接抓取特徵清單中對應的真實 Excel 欄位名稱，避免 KeyError
         opt_flow = best_run[features[2]].values[0]
         opt_temp = best_run[features[3]].values[0]
         opt_oxy = best_run[features[4]].values[0]
