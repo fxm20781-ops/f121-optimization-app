@@ -10,7 +10,7 @@ st.title("🏭 F121 加熱爐操作最佳化與預測系統")
 @st.cache_resource
 def load_data_and_train_models():
     # 強迫指定 engine="openpyxl"，不論副檔名是啥，都用 Excel 格式打開
-    df = pd.read_excel("data.xlsx", skiprows=[1], engine="openpyxl")
+    df = pd.read_excel("data.csv", skiprows=[1], engine="openpyxl")
     
     # 徹底清洗所有欄位名稱：移除換行符 \n、移除所有前後重複空白
     df.columns = df.columns.str.replace(r'\s+', ' ', regex=True).str.strip()
@@ -34,22 +34,20 @@ def load_data_and_train_models():
         elif 'NG' in col and 'consumption' in col: col_ng = col
         elif 'C122' in col and 'bottom' in col: col_c122 = col
 
-    # 【超級核心修正】將所有需要用到的製程特徵欄位，強制轉換成數字。
-    # 只要遇到 '***'，errors='coerce' 會自動將其轉換為 NaN (空白)，接著再用 dropna 濾除！
+    # 將所有需要用到的製程特徵欄位，強制轉換成數字並濾除異常符號（如 ***）
     target_cols = [col_dt, col_c141, col_clo, col_outlet, col_oxy, col_ng, col_c122]
     for col in target_cols:
         df[col] = pd.to_numeric(df[col], errors='coerce')
         
-    # 轉換完畢後，這時再 dropna() 就能百分之百完美剔除所有含有 '***' 的不良紀錄
     df = df.dropna(subset=target_cols)
 
-    # 標準特徵(X)與目標(y)
+    # 【重要變更】特徵（X）的順序保持一致，但模型訓練時 outlet_temp 現在將由使用者在前端給定
     features = [col_dt, col_c141, col_clo, col_outlet, col_oxy]
     X = df[features]
     y_ng = df[col_ng]
     y_c122 = df[col_c122]
     
-    # 使用極速隨機森林模型
+    # 使用隨機森林模型訓練
     model_ng = RandomForestRegressor(n_estimators=30, random_state=42, n_jobs=-1)
     model_ng.fit(X, y_ng)
     
@@ -67,30 +65,31 @@ def load_data_and_train_models():
 
 # 執行載入
 try:
-    with st.spinner('📊 AI 正在強力清洗異常數據(如 ***)並訓練製程模型...'):
+    with st.spinner('📊 AI 正在解析數據並建立製程預測模型...'):
         model_ng, model_c122, r, features = load_data_and_train_models()
-    st.success('✅ 異常數據清洗完畢，AI 模型加載成功！')
+    st.success('✅ 數據加載成功！智慧優化系統已就緒。')
 except Exception as e:
     st.error(f"❌ 數據初始化失敗，錯誤原因: {e}")
     st.stop()
 
-# 2. 側邊欄輸入
-st.sidebar.header("📥 輸入當前製程條件")
+# 2. 側邊欄輸入（已將 F121 outlet temperature 移動到這裡）
+st.sidebar.header("📥 輸入當前給定條件")
 input_dt = st.sidebar.number_input("1. DT operation", min_value=r['dt_min'], max_value=r['dt_max'], value=0.8000, format="%.4f")
 input_c141 = st.sidebar.number_input("2. C141 operation", min_value=r['c141_min'], max_value=r['c141_max'], value=1.48, format="%.2f")
+input_outlet = st.sidebar.number_input("3. F121 outlet temperature (°C)", min_value=r['temp_min'], max_value=r['temp_max'], value=(r['temp_min'] + r['temp_max'])/2, format="%.2f")
 
 # 3. 核心最佳化運算
 if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
-    with st.spinner('🔄 正在精準計算最低能耗解...'):
+    with st.spinner('🔄 正在固定出口溫度，精準尋找最低能耗操作點...'):
+        # 調整為對 CLO 流量與含氧量進行網格搜尋（切分 8 點，共 64 種組合）
         flows = np.linspace(r['flow_min'], r['flow_max'], 8)
-        temps = np.linspace(r['temp_min'], r['temp_max'], 8)
         oxys = np.linspace(r['oxy_min'], r['oxy_max'], 8)
         
         grid = []
         for f in flows:
-            for t in temps:
-                for o in oxys:
-                    grid.append([input_dt, input_c141, f, t, o])
+            for o in oxys:
+                # 這裡要嚴格對照 features 欄位的順序：[DT, C141, CLO, outlet, oxy]
+                grid.append([input_dt, input_c141, f, input_outlet, o])
                     
         sim_df = pd.DataFrame(grid, columns=features)
         sim_df['pred_NG'] = model_ng.predict(sim_df)
@@ -100,20 +99,20 @@ if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
         predicted_c122_temp = model_c122.predict(best_run[features])[0]
         
         opt_flow = best_run[features[2]].values[0]
-        opt_temp = best_run[features[3]].values[0]
         opt_oxy = best_run[features[4]].values[0]
         min_ng = best_run['pred_NG'].values[0]
 
     # 4. 顯示結果
     st.markdown("---")
     st.header("💡 系統優化引導報告")
-    col1, col2, col3 = st.columns(3)
+    st.info(f"📌 **在此給定條件下**：DT={input_dt:.4f} | C141={input_c141:.2f} | 出口溫度={input_outlet:.2f} °C")
+    
+    col1, col2 = st.columns(2)
     with col1: st.metric(label="👉 建議 F121 CLO flow", value=f"{opt_flow:.2f}")
-    with col2: st.metric(label="👉 建議 F121 出口溫度", value=f"{opt_temp:.2f} °C")
-    with col3: st.metric(label="👉 建議 F121 含氧量 %", value=f"{opt_oxy:.2f} %")
+    with col2: st.metric(label="👉 建議 F121 含氧量 %", value=f"{opt_oxy:.2f} %")
         
     st.markdown("### 📈 預期效益與副反應預測")
-    st.info(f"🔥 預估最低 **F121 NG consumption (能耗)**: **{min_ng:.2f}**")
+    st.success(f"🔥 預估最低 **F121 NG consumption (能耗)**: **{min_ng:.2f}**")
     st.warning(f"🌡️ 預估此時 **C122 bottom temperature**: **{predicted_c122_temp:.2f} °C**")
 else:
-    st.info("👈 請在左側輸入當前的 `DT operation` 與 `C141 operation`，然後點擊「開始計算最優操作參數」。")
+    st.info("👈 請在左側輸入當前的 `DT`、`C141` 與 `F121 outlet temperature`，然後點擊「開始計算最優操作參數」。")
