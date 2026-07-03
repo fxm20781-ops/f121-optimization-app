@@ -9,16 +9,24 @@ st.title("🏭 F121 加熱爐操作最佳化與預測系統")
 # 1. 讀取數據與模型訓練（強效快取）
 @st.cache_resource
 def load_data_and_train_models():
-    # 【最暴力的解法】直接丟棄 CSV 的前兩行表頭 (skiprows=2)，重新賦予標準欄位名稱
-    # 這樣管它 CSV 裡面有幾個空格、換行符號還是代號，進到 Python 通通變標準名稱！
-    df = pd.read_csv("data.csv", skiprows=2, header=None).dropna()
+    # 讀取數據（跳過第二行的單位標籤）
+    df = pd.read_csv("data.csv", skiprows=[1]).dropna()
     
-    # 依據您原始 CSV 的 9 個欄位順序，由左至右精準命名：
-    # 0: 時間, 1: DT, 2: C141, 3: C122溫度, 4: C121溫度, 5: CLO流量, 6: 出口溫度, 7: NG能耗, 8: 含氧量
-    df.columns = [
-        'Time', 'DT', 'C141', 'C122_temp', 'C121_temp', 
-        'CLO_flow', 'outlet_temp', 'NG_consumption', 'oxygen_content'
-    ]
+    # 建立一個乾淨的新名稱清單
+    current_cols = list(df.columns)
+    
+    # 【無敵對位機制】不管時間欄是不是 Index，我們直接抓剩下的欄位，由左到右覆蓋名稱
+    # 真正的核心製程數據，在 df 中由左到右必然是：DT, C141, C122, C121, CLO, outlet, NG, oxygen
+    # 我們不猜總長度，直接用負數索引（倒數第幾欄）來指派，保證 100% 精準對位！
+    df = df.rename(columns={
+        current_cols[-8]: 'DT',
+        current_cols[-7]: 'C141',
+        current_cols[-6]: 'C122_temp',
+        current_cols[-4]: 'CLO_flow',
+        current_cols[-3]: 'outlet_temp',
+        current_cols[-2]: 'NG_consumption',
+        current_cols[-1]: 'oxygen_content'
+    })
     
     # 標準特徵與目標
     features = ['DT', 'C141', 'CLO_flow', 'outlet_temp', 'oxygen_content']
