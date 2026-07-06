@@ -118,8 +118,8 @@ if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
     st.info(f"📌 **當前給定條件基準**：DT={input_dt:.4f} | C141={input_c141:.2f} | 出口溫度={input_outlet:.2f} °C")
     
     col1, col2 = st.columns(2)
-    with col1: st.metric(label="👉 建議 F121 CLO flow (歷史實戰最佳值)", value=f"{opt_flow:.2f}")
-    with col2: st.metric(label="👉 建議 F121 含氧量 % (歷史實戰最佳值)", value=f"{opt_oxy:.2f} %")
+    with col1: st.metric(label="👉 建議 F121 CLO flow (預測最佳值)", value=f"{opt_flow:.2f}")
+    with col2: st.metric(label="👉 建議 F121 含氧量 % (預測最佳值)", value=f"{opt_oxy:.2f} %")
         
     st.markdown("### 📈 預期效益與副反應預測")
     st.success(f"🔥 預估最低 **F121 NG consumption (能耗)**: **{min_ng:.2f}**")
