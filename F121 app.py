@@ -121,7 +121,7 @@ if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
     with col1: st.metric(label="👉 建議 F121 CLO flow (預測最佳值)", value=f"{opt_flow:.2f}")
     with col2: st.metric(label="👉 建議 F121 含氧量 % (預測最佳值)", value=f"{opt_oxy:.2f} %")
         
-    st.markdown("### 📈 預期效益與副反應預測")
+    st.markdown("### 📈 F121 NG用量與C122 底部溫度預測")
     st.success(f"🔥 預估最低 **F121 NG consumption (能耗)**: **{min_ng:.2f}**")
     st.warning(f"🌡️ 預估此時 **C122 bottom temperature**: **{predicted_c122_temp:.2f} °C**")
 else:
