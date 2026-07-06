@@ -114,7 +114,7 @@ if st.sidebar.button("🚀 開始計算最優操作參數", type="primary"):
 
     # 4. 顯示結果
     st.markdown("---")
-    st.header("💡 隨機森林迴歸（Random Forest Regressor）")
+    st.header("💡 隨機森林迴歸（Random Forest Regressor）,30 棵決策樹組成")
     st.info(f"📌 **當前給定條件基準**：DT={input_dt:.4f} | C141={input_c141:.2f} | 出口溫度={input_outlet:.2f} °C")
     
     col1, col2 = st.columns(2)
