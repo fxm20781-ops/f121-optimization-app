@@ -77,7 +77,7 @@ input_dt = st.sidebar.number_input("1. DT operation", min_value=r['dt_min'], max
 input_c141 = st.sidebar.number_input("2. C141 operation", min_value=r['c141_min'], max_value=r['c141_max'], value=1.48, format="%.2f")
 
 # 設定預設值為歷史溫度的中間值
-default_temp = float(np.clip(260.0, r['temp_min'], r['temp_max'])) # 防禦性預設值
+default_temp = float(df[col_outlet].mean()) # 防禦性預設值
 input_outlet = st.sidebar.number_input("3. F121 outlet temperature (°C)", min_value=r['temp_min'], max_value=r['temp_max'], value=default_temp, format="%.2f")
 
 # 3. 核心最佳化運算
